@@ -1,0 +1,179 @@
+@using Docomposer.Core.Api
+@using System.Data
+@using Docomposer.Blazor.Services
+@using Docomposer.Core.Domain
+@using Docomposer.Data.Util
+@using Newtonsoft.Json
+@using Task = System.Threading.Tasks.Task
+@inject IJSRuntime _js;
+@inject BlazorDataTransferService BlazorDataTransferService;
+
+@if (Queries != null)
+{
+    <div class="row p-2">
+        <div class="col-2">
+            <ul class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                @foreach (var query in Queries)
+                {
+                    <ItemTabDataQuery Name="@query.Name" Active="@query.Active" OnItemClicked="@HandleItemClicked"></ItemTabDataQuery>
+                }
+                <li class="nav-item">
+                    <a @onclick="AddQuery" class="nav-link text-left" data-toogle="pill" role="tab" href="javascript:undefined"><i class="fas fa-plus-circle"></i> Add query</a>
+                </li>
+            </ul>
+        </div>
+        <div class="col-10">
+            <div class="tab-content" id="v-pills-tabContent">
+                @foreach (var query in Queries)
+                {
+                    <div class="tab-pane @query.Active" id="tab-id-@query.Name" role="tabpanel">
+                        <ItemDataQuery QueryModel="@query" OnUpdateQuery="@HandleOnUpdateQuery"></ItemDataQuery>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public EventCallback<string> OnItemClicked { get; set; }
+    [Parameter]
+    public int DataSourceId { get; set; }
+
+    private List<DataQueryModel> Queries { get; set; }
+    
+    private DataQueryModel _newQuery;
+    private string _clientInstance;
+
+    protected override void OnInitialized()
+    {
+        _LoadQueries();
+        _ActivateQuery();
+        Queries.ForEach(q => q.SyncParameters());
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            BlazorDataTransferService.OnDataChanged += HandleDataChanged;
+        }
+        
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async Task AddQuery()
+    {
+        try
+        {
+            _newQuery = new DataQueryModel
+            {
+                Name = "query",
+                Description = "query description",
+                Statement = "SELECT * FROM ",
+                DataSourceId = DataSourceId,
+                DataTable = new DataTable(),
+                Parameters = JsonConvert.SerializeObject(new List<SqlParam>()),
+                SqlParameters = new List<SqlParam>()
+            };
+            
+            var newQueryId = DataQueries.AddDataQuery(new DataQuery
+            {
+                Name = _newQuery.Name,
+                Description = _newQuery.Description,
+                DataSourceId = _newQuery.DataSourceId,
+                Statement = _newQuery.Statement,
+                Parameters = _newQuery.Parameters
+            });
+            _newQuery.Id = newQueryId;
+            Queries.Add(_newQuery);
+            _ActivateQuery(newQueryId);
+        }
+        catch(TaskCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", ex.Message);
+        }
+
+        StateHasChanged();
+    }
+
+    private void _ActivateQuery(int queryId = 0)
+    {
+        if (Queries.Count <= 0) return;
+
+        var first = Queries.First();
+        
+        if (queryId == 0 && !Queries.Exists(q => q.Active == "active"))
+        {
+            first.Active = "active";
+        }
+        else if (Queries.Exists(q => q.Id == queryId))
+        {
+            foreach (var query in Queries)
+            {
+                query.Active = query.Id == queryId ? "active" : "";
+            }
+        }
+        else
+        {
+            first.Active = "active";
+        }
+    }
+
+    private void HandleItemClicked(string name)
+    {
+        foreach (var query in Queries)
+        {
+            query.Active = query.Name == name ? "active" : "";
+        }
+    }
+
+    private async void HandleDataChanged(object sender, BlazorTransferData e)
+    {
+        try
+        {
+            DataSourceId = e.Id;
+            
+            _LoadQueries();
+
+            Queries.ForEach(q => q.SyncParameters());
+
+            _ActivateQuery();
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            //todo: to address exception?
+        }
+    }
+
+    private void HandleOnUpdateQuery(DataQueryModel query)
+    {
+        _LoadQueries();
+        
+        Queries.ForEach(q => q.SyncParameters());
+        
+        _ActivateQuery(query.Id);
+    }
+
+    private void _LoadQueries()
+    {
+        Queries = DataQueries.GetDataQueriesByDataSourceId(DataSourceId).Select(q => new DataQueryModel
+        {
+            Id = q.Id,
+            Name = q.Name,
+            Description = q.Description,
+            Statement = q.Statement,
+            DataSourceId = q.DataSourceId,
+            DataTable = new DataTable(),
+            Parameters = q.Parameters,
+            SqlParameters = new List<SqlParam>()
+        }).ToList();
+    } 
+    
+}

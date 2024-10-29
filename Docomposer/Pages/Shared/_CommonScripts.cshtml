@@ -1,0 +1,5 @@
+﻿@using Microsoft.AspNetCore.Html
+
+docomposer.configure(@(new HtmlString(JsConfig.AsJson(@Model))));
+docomposer.api.setup();
+

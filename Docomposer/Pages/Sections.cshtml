@@ -1,0 +1,49 @@
+﻿@page
+@using Microsoft.AspNetCore.Html
+@model Docomposer.Pages.SectionsModel
+@{
+    ViewData["Title"] = "Sections";
+}
+
+<div class="row">
+    <div class="col-md-auto">
+        <div id="tree-menu"></div>
+    </div>
+    <div class="col" id="section-container">
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" data-target="#tab-section-preview" data-toggle="tab" href="javascript:undefined">Preview</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-target="#tab-section-data-preview" data-toggle="tab" href="javascript:undefined">Preview with Data</a>
+            </li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane show active" id="tab-section-preview" role="tabpanel" aria-labelledby="home-tab">
+                <div id="pdf-preview" class="text-center" style="background-color: #eeeeee;"></div>
+            </div>
+            <div class="tab-pane" id="tab-section-data-preview" role="tabpanel" aria-labelledby="profile-tab">
+                <div class="container-fluid">
+                    @(await Html.RenderComponentAsync<Docomposer.Blazor.Shared.SectionData.ItemSectionData>(RenderMode.ServerPrerendered))
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            let preview = "#pdf-preview";
+            docomposer.configure(@(new HtmlString(JsConfig.AsJson(@Model))));
+            docomposer.api.setup();
+            docomposer.api.menu.sections("#tree-menu");
+            docomposer.api.doc.init({ container: "#section-container", preview: preview });
+
+            docomposer.util.setPdfContainerHeight(preview, 1.0);
+            $(window).resize(function() {
+                docomposer.util.setPdfContainerHeight(preview, 1.0);
+            });
+        });
+    </script>
+}

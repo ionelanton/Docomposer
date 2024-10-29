@@ -1,0 +1,14 @@
+<li class="nav-item">
+    <a class="nav-link @Active" data-toogle="pill" role="tab" aria-controls="tab-id-@Name" @onclick="@(() => HandleOnClick(Name))" href="javascript:undefined">@Name</a>
+</li>
+@code {
+    [Parameter] public string Name { get; set; }
+    [Parameter] public string Active { get; set; }
+    
+    [Parameter] public EventCallback<string> OnItemClicked { get; set; }
+    
+    private async Task HandleOnClick(string name)
+    {
+        await OnItemClicked.InvokeAsync(name);
+    }
+}

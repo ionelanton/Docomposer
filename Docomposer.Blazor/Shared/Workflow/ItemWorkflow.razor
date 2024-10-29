@@ -1,0 +1,527 @@
+@using Docomposer.Core.Domain
+@using System.IO
+@using Docomposer.Blazor.Services
+@using System.Data
+@using Docomposer.Core.Api
+@using Docomposer.Core.Domain.WorkflowConfig
+@using Docomposer.Utils
+@using Newtonsoft.Json
+@inject IJSRuntime _js;
+@inject BlazorDataTransferService BlazorDataTransferService;
+
+@if (WorkflowConfig != null)
+{
+    <div class="border-bottom" name="Sources">
+        <div class="row p-1">
+            <div class="col-2">
+                <label for="source-select">From </label>
+            </div>
+            <div class="col-auto">
+                <select value="@WorkflowConfig.Source.Type" @onchange="OnSourceSelection" class="form-control" id="source-select">
+                    @foreach (var source in (WorkflowSourceType[])Enum.GetValues(typeof(WorkflowSourceType)))
+                    {
+                        <option value="@source">@source</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="row p-1 @(WorkflowConfig.Source.Type == WorkflowSourceType.Documents ? "" : "d-none")">
+            <div class="col-2">
+                <label for="documents-select">Select </label>
+            </div>
+            <div class="col-auto">
+                <select value="@WorkflowConfig.Source.Document.Id" @onchange="OnDocumentSelection" class="form-control" id="documents-select">
+                    <option value="0">Select a document</option>
+                    @foreach (var doc in _documents)
+                    {
+                        <option value="@doc.Id">@doc.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="row p-1 @(WorkflowConfig.Source.Type == WorkflowSourceType.Compositions ? "" : "d-none")">
+            <div class="col-2">
+                <label for="compositions-select">Select </label>
+            </div>
+            <div class="col-auto">
+                <select value="@WorkflowConfig.Source.Composition.Id" @onchange="OnCompositionSelection" class="form-control" id="compositions-select">
+                    <option value="0">Select an composition</option>
+                    @foreach (var composition in _compositions)
+                    {
+                        <option value="@composition.Id">@composition.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="border-bottom" name="Parameters">
+        <div class="row p-1">
+            <div class="col-2">
+                <!-- Parameters -->
+                <p>Set parameters by</p>
+            </div>
+            <div class="col-auto">
+                <div class="p-1">
+                    @if (Queries.Count > 0)
+                    {
+                        <select value="@WorkflowConfig.Parameters.Type" @onchange="OnParameterSelection" class="form-control" id="set-parameters-by-select">
+                            @foreach (WorkflowParametersType type in Enum.GetValues(typeof(WorkflowParametersType)))
+                            {
+                                <option value="@type">@(WorkflowParametersTypeDescription(type))</option>
+                            }
+                        </select>
+                    }
+                    else
+                    {
+                        <p>No parameters to set</p>
+                    }
+                </div>
+                @if (WorkflowConfig.Parameters.Type == WorkflowParametersType.ManualEntry)
+                {
+                    @foreach (var query in Queries)
+                    {
+                        @foreach (var p in query.SqlParameters)
+                        {
+                            <span class="p-1">
+                                <span class="badge badge-light">
+                                    <label for="@(query.Name + "." + p.Name)">@("[" + query.Name + "].[" + p.Name + "]")</label>
+                                    <input type="text" @bind="@p.Value" class="form-control form-control-sm" id="@(query.Name + "." + p.Name)">
+                                </span>
+                            </span>
+                        }
+                    }
+                }
+                @if (WorkflowConfig.Parameters.Type == WorkflowParametersType.DataSource)
+                {
+                    <select value="@WorkflowConfig.Parameters.DataSource" @onchange="OnDataSourceSelection" class="form-control" id="set-query-by-select">
+                        <option value="0">Select a data source</option>
+                        @foreach (DataSource dataSource in _dataSources)
+                        {
+                            <option value="@dataSource.Id">@dataSource.Name</option>
+                        }
+                    </select>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="border-bottom" name="Generate">
+        <div class="row p-1">
+            <div class="col-2">
+                <!-- Generate -->
+                <p>Generate</p>
+            </div>
+            <div class="col-auto">
+                <select value="@WorkflowConfig.Generate.Type" @onchange="OnGenerateSelection" class="form-control" id="source-select">
+                    @foreach (WorkflowGenerationType type in Enum.GetValues(typeof(WorkflowGenerationType)))
+                    {
+                        <option value="@type">@(WorkflowGenerationTypeDescription(type))</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+    <div name="SendTo">
+        <div class="row p-1">
+            <div class="col-2">
+                <!-- Send to -->
+                <p>Send to</p>
+            </div>
+            <div class="col-auto">
+                <select value="@WorkflowConfig.SendTo.Type" @onchange="OnSendToSelection" class="form-control" id="source-select">
+                    @foreach (WorkflowSendToType type in Enum.GetValues(typeof(WorkflowSendToType)))
+                    {
+                        <option value="@type">@type</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="row p-1">
+        <div class="col-2">
+        </div>
+        <div class="col-auto">
+            <button type="button" disabled="@_btnSaveDisabled" class="btn btn-primary" @onclick="Save">Save</button>
+            <button type="button" disabled="@_btnCancelDisabled" class="btn btn-secondary" @onclick="CancelModifications">Cancel</button>
+            <button type="button" disabled="@_btnRunDisabled" class="btn btn-primary" @onclick="RunWorkflow">
+                <i id="running-workflow-id" class="fas fa-cog"></i> Run
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private Workflow AWorkflow { get; set; }
+    private WorkflowConfig WorkflowConfig { get; set; }
+    private List<DataQueryModel> Queries { get; set; } = new();
+    private List<DataSource> _dataSources { get; set; }
+
+    private string _clientInstance;
+
+    private List<Document> _documents = new();
+    private List<Composition> _compositions = new();
+
+    private bool _btnSaveDisabled = true;
+    private bool _btnCancelDisabled = true;
+    private bool _btnRunDisabled = false;
+
+    private void UiEditing(bool editing)
+    {
+        if (editing)
+        {
+            _btnSaveDisabled = false;
+            _btnCancelDisabled = false;
+            _btnRunDisabled = true;
+        }
+        else
+        {
+            _btnSaveDisabled = true;
+            _btnCancelDisabled = true;
+            _btnRunDisabled = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            BlazorDataTransferService.OnDataChanged += HandleDataChanged;
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async void HandleDataChanged(object sender, BlazorTransferData e)
+    {
+        try
+        {
+            _clientInstance = await GetClientInstance();
+            var isOk = _clientInstance == e.ClientInstance;
+
+            if (isOk && e.Type == "Workflows")
+            {
+                AWorkflow = Workflows.GetWorkflowById(e.Id);
+                WorkflowConfig = JsonConvert.DeserializeObject<WorkflowConfig>(AWorkflow.Configuration);
+
+                _dataSources = DataSources.GetDataSourcesByProjectId(AWorkflow.ProjectId);
+                _documents = Documents.GetDocumentsByProjectId(AWorkflow.ProjectId);
+                _compositions = Compositions.GetCompositionsByProjectId(AWorkflow.ProjectId);
+
+                if (WorkflowConfig.Source.Type == WorkflowSourceType.Documents)
+                {
+                    SetQueriesFromDocumentId(WorkflowConfig.Source.Document.Id);
+                }
+
+                if (WorkflowConfig.Source.Type == WorkflowSourceType.Compositions)
+                {
+                    SetQueriesFromCompositionId(WorkflowConfig.Source.Composition.Id);
+                }
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch(TaskCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                await _js.InvokeVoidAsync($"docomposer.util.alertError", ex.Message);
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+        }
+    }
+
+    private ValueTask<string> GetClientInstance()
+    {
+        return _js.InvokeAsync<string>("docomposer.util.clientInstance");
+    }
+
+    private void OnSourceSelection(ChangeEventArgs e)
+    {
+        if (e.Value == null) return;
+
+        WorkflowConfig.Source.Type = Enum.Parse<WorkflowSourceType>(e.Value.ToString() ?? string.Empty);
+        UiEditing(true);
+    }
+
+    private void OnDocumentSelection(ChangeEventArgs e)
+    {
+        if (e.Value == null) return;
+
+        var documentId = Convert.ToInt32(e.Value);
+
+        if (documentId > 0)
+        {
+            var document = Documents.GetDocumentById(documentId);
+
+            WorkflowConfig.Source.Document.Id = documentId;
+            WorkflowConfig.Source.Document.Name = document.Name;
+            WorkflowConfig.Source.Document.ProjectId = document.ProjectId;
+
+            SetQueriesFromDocumentId(documentId);
+        }
+        else
+        {
+            WorkflowConfig.Source.Document.Id = 0;
+        }
+        UiEditing(true);
+    }
+
+    private void SetQueriesFromDocumentId(int documentId)
+    {
+        Queries = DataQueries.GetDataQueriesByDocumentId(documentId).Select(q => new DataQueryModel
+        {
+            Id = q.Id,
+            Name = q.Name,
+            Statement = q.Statement,
+            DataSourceId = q.DataSourceId,
+            DataTable = new DataTable(),
+            Parameters = q.Parameters
+        }).OrderBy(q => q.Id).ToList();
+        Queries.ForEach(q => q.SyncParameters());
+    }
+
+    private void OnCompositionSelection(ChangeEventArgs e)
+    {
+        if (e.Value == null) return;
+
+        var compositionId = Convert.ToInt32(e.Value);
+
+        if (compositionId > 0)
+        {
+            var composition = Docomposer.Core.Api.Compositions.GetCompositionById(compositionId);
+
+            WorkflowConfig.Source.Composition.Id = compositionId;
+            WorkflowConfig.Source.Composition.Name = composition.Name;
+            WorkflowConfig.Source.Composition.ProjectId = composition.ProjectId;
+
+            SetQueriesFromCompositionId(compositionId);
+        }
+        else
+        {
+            WorkflowConfig.Source.Composition.Id = 0;
+        }
+        UiEditing(true);
+    }
+
+    private void SetQueriesFromCompositionId(int compositionId)
+    {
+        Queries = DataQueries.GetDataQueriesByCompositionId(compositionId).Select(q => new DataQueryModel
+        {
+            Id = q.Id,
+            Name = q.Name,
+            Statement = q.Statement,
+            DataSourceId = q.DataSourceId,
+            DataTable = new DataTable(),
+            Parameters = q.Parameters
+        }).OrderBy(q => q.Id).ToList();
+        Queries.ForEach(q => q.SyncParameters());
+    }
+
+    private void OnParameterSelection(ChangeEventArgs e)
+    {
+        if (e.Value == null) return;
+
+        WorkflowConfig.Parameters.Type = Enum.Parse<WorkflowParametersType>(e.Value.ToString() ?? string.Empty);
+        UiEditing(true);
+    }
+    
+    private void OnDataSourceSelection(ChangeEventArgs e)
+    {
+        UiEditing(true);
+    }
+
+    private void OnGenerateSelection(ChangeEventArgs e)
+    {
+        if (e.Value == null) return;
+
+        WorkflowConfig.Generate.Type = Enum.Parse<WorkflowGenerationType>(e.Value.ToString() ?? string.Empty);
+        UiEditing(true);
+    }
+
+    private void OnSendToSelection(ChangeEventArgs e)
+    {
+        if (e.Value == null) return;
+
+        WorkflowConfig.SendTo.Type = Enum.Parse<WorkflowSendToType>(e.Value.ToString() ?? string.Empty);
+        UiEditing(true);
+    }
+
+    private async System.Threading.Tasks.Task Save()
+    {
+        bool documentError = WorkflowConfig.Source.Type == WorkflowSourceType.Documents && WorkflowConfig.Source.Document.Id == 0;
+        bool compositionError = WorkflowConfig.Source.Type == WorkflowSourceType.Compositions && WorkflowConfig.Source.Composition.Id == 0;
+
+        if (documentError)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", "Please select a document");
+            return;
+        }
+
+        if (compositionError)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", "Please select a composition");
+            return;
+        }
+
+        AWorkflow.Configuration = WorkflowConfig.Configuration();
+
+        try
+        {
+            Workflows.UpdateWorkflow(AWorkflow);
+            await _js.InvokeVoidAsync($"docomposer.util.alert", "Modifications saved");
+            UiEditing(false);
+        }
+        catch(TaskCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", ex.Message);
+        }
+    }
+
+    private async System.Threading.Tasks.Task CancelModifications()
+    {
+        try
+        {
+            var storedTask = Workflows.GetWorkflowById(AWorkflow.Id);
+            WorkflowConfig = JsonConvert.DeserializeObject<WorkflowConfig>(storedTask.Configuration);
+            await _js.InvokeVoidAsync($"docomposer.util.alert", "Modifications canceled");
+            UiEditing(false);
+        }
+        catch(TaskCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", ex.Message);
+        }
+    }
+
+    private async Task RunWorkflow()
+    {
+        try
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.addClass", "#running-workflow-id", "fa-spin");
+            await _js.InvokeVoidAsync($"docomposer.util.alert", "Workflow started, please wait...");
+
+            foreach (var q in Queries)
+            {
+                foreach (var parameter in q.SqlParameters)
+                {
+                    if (parameter.Value.Trim() == "")
+                    {
+                        await _js.InvokeVoidAsync($"docomposer.util.alertError", $"Parameter {parameter.Name} has no value");
+                        await _js.InvokeVoidAsync($"docomposer.util.removeClass", "#running-workflow-id", "fa-spin");
+                        return;
+                    }
+                }
+            }
+
+            var error = false;
+            
+            var copiedDataModelQueries = Queries.UpdateDataTablesFromQueries();
+
+            if (WorkflowConfig.Source.Type == WorkflowSourceType.Documents)
+            {
+                if (WorkflowConfig.Source.Document.Id > 0)
+                {
+                    var binaryContent = Documents.GenerateWordDocument(WorkflowConfig.Source.Document.Id, copiedDataModelQueries).DocumentByteArray;
+
+                    switch (ThisApp.Distribution())
+                    {
+                        case "desktop":
+                            var tempDocxFile = Path.Combine(Path.GetTempPath(), WorkflowConfig.Source.Document.Name + ".docx");
+                            await File.WriteAllBytesAsync(tempDocxFile, binaryContent);
+                            ProcessUtils.OpenExistingDocxInMicrosoftWord(tempDocxFile);
+                            break;
+                        case "server":
+                            var base64Content = Convert.ToBase64String(binaryContent);
+                            var fileName = WorkflowConfig.Source.Document.Name + ".docx";
+                            await _js.InvokeVoidAsync($"docomposer.util.downloadFile", fileName, base64Content);
+                            break;
+                    }
+                }
+                else
+                {
+                    error = true;
+                    await _js.InvokeVoidAsync($"docomposer.util.alertError", "Please select a document");
+                }
+            }
+
+            if (WorkflowConfig.Source.Type == WorkflowSourceType.Compositions)
+            {
+                if (WorkflowConfig.Source.Composition.Id > 0)
+                {
+                    var binaryContent = Compositions.GenerateWordDocument(WorkflowConfig.Source.Composition.Id, copiedDataModelQueries).DocumentByteArray;
+                    
+                    switch (ThisApp.Distribution())
+                    {
+                        case "desktop":
+                            var tempDocxFile = Path.Combine(Path.GetTempPath(), WorkflowConfig.Source.Composition.Name + ".docx");
+                            await File.WriteAllBytesAsync(tempDocxFile, binaryContent);
+                            ProcessUtils.OpenExistingDocxInMicrosoftWord(tempDocxFile);
+                            break;
+                        case "server":
+                            var base64Content = Convert.ToBase64String(binaryContent);
+                            var fileName = WorkflowConfig.Source.Composition.Name + ".docx";
+                            await _js.InvokeVoidAsync($"docomposer.util.downloadFile", fileName, base64Content);
+                            break;
+                    }
+                }
+                else
+                {
+                    error = true;
+                    await _js.InvokeVoidAsync($"docomposer.util.alertError", "Please select an composition");
+                }
+            }
+
+            await _js.InvokeVoidAsync($"docomposer.util.removeClass", "#running-workflow-id", "fa-spin");
+
+            if (!error)
+            {
+                await _js.InvokeVoidAsync($"docomposer.util.alert", "Workflow completed");
+            }
+        }
+        catch(TaskCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.removeClass", "#running-workflow-id", "fa-spin");
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", ex.Message);
+        }
+    }
+
+    private string WorkflowParametersTypeDescription(WorkflowParametersType type)
+    {
+        switch (type)
+        {
+            case WorkflowParametersType.ManualEntry:
+                return "Manual entry";
+            case WorkflowParametersType.DataSource:
+                return "Data source";
+            // case TaskParametersType.HttpRequest:
+            //     return "HTTP request";
+            default:
+                return "";
+        }
+    }
+
+    private string WorkflowGenerationTypeDescription(WorkflowGenerationType type)
+    {
+        switch (type)
+        {
+            case WorkflowGenerationType.WordDocument:
+                return "Word document";
+            case WorkflowGenerationType.PdfDocument:
+                return "PDF document";
+            default:
+                return "";
+        }
+    }
+}

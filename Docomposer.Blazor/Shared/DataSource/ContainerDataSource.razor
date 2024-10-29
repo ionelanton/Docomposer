@@ -1,0 +1,290 @@
+@using Docomposer.Core.Domain.DataSourceConfig
+@using Docomposer.Blazor.Data.DataSource
+@using Docomposer.Blazor.Services
+@using Docomposer.Core.Api
+@using Docomposer.Core.Domain
+@using Newtonsoft.Json
+@using System.IO
+@using Docomposer.Data.Databases.DataStore.Tables
+@using Docomposer.Utils
+@using Docomposer.Blazor.Shared.DataQuery
+@using Task = System.Threading.Tasks.Task
+@inject IJSRuntime _js;
+@inject BlazorDataTransferService BlazorDataTransferService;
+
+@if (_dataSource != null)
+{
+    <EditForm Model="@_dataSource" OnValidSubmit="@Update">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-1">
+                    <label class="form-label">Type: </label>
+                </div>
+                <div class="col-md-4">
+                    <select value="@_dataSource.Type" @onchange="OnDataSourceSelection" class="form-control" id="source-select">
+                        <option value="0">Select a datasource type</option>
+                        @foreach (DataSourceEnum type in (DataSourceEnum[])Enum.GetValues(typeof(DataSourceEnum)))
+                        {
+                            <option value="@type">@type</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            @{
+                switch (_dataSource.Type)
+                {
+                    case DataSourceEnum.Excel:
+                        <ItemExcelDataSource ProjectId="_dataSource.ProjectId" ExcelConfig="(DataSourceExcelConfig)_dataSource.Config" OnFileChange="@HandleOnFileChange"></ItemExcelDataSource>
+                        break;
+                    case DataSourceEnum.Csv:
+                        <ItemCsvDataSource ProjectId="_dataSource.ProjectId" CsvConfig="(DataSourceCsvConfig)_dataSource.Config" OnFileChange="@HandleOnFileChange"></ItemCsvDataSource>
+                        break;
+                    case DataSourceEnum.Sqlite:
+                        <ItemSqliteDataSource ProjectId="_dataSource.ProjectId" SqliteConfig="(DataSourceSqliteConfig)_dataSource.Config" OnFileChange="@HandleOnFileChange"></ItemSqliteDataSource>
+                        break;
+                }
+            }
+            <div class="row">
+                <div class="col-md-1">
+                </div>
+                <div class="col-md-4">
+                    <p></p>
+                    <button type="submit" class="btn btn-primary">Update</button>
+                    <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="container-fluid">
+                    <hr/>
+                </div>
+                <div class="container-fluid">
+                    <ItemDataQueries DataSourceId="@_dataSource.DataSourceId"></ItemDataQueries>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+}
+
+@code {
+    private ItemDataSourceModel _dataSource;
+    private byte[] _binaryFileContent;
+    private string _clientInstance;
+    private static readonly IFileHandler FileHandler = ThisApp.FileHandler();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            BlazorDataTransferService.OnDataChanged += HandleDataChanged;
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async void HandleDataChanged(object sender, BlazorTransferData e)
+    {
+        try
+        {
+            _clientInstance = await GetClientInstance();
+            var isOk = _clientInstance == e.ClientInstance;
+            _binaryFileContent = null;
+            
+            if (isOk && e.Type == "DataSources")
+            {
+                var dataSource = DataSources.GetDataSourceById(e.Id);
+                _dataSource = new ItemDataSourceModel
+                {
+                    ProjectId = dataSource.ProjectId,
+                    DataSourceId = dataSource.Id,
+                    Type = dataSource.Type,
+                    Config = GetConfigurationFrom(dataSource.Type, dataSource.Configuration)
+                };
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch(TaskCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            //todo: add a logger
+            //await _js.InvokeVoidAsync($"docomposer.util.alertError", ex.Message);
+            Console.WriteLine("Add a logger for exception: " + ex.Message);
+        }
+    }
+
+    private ValueTask<string> GetClientInstance()
+    {
+        return _js.InvokeAsync<string>("docomposer.util.clientInstance");
+    }
+
+    private async void OnDataSourceSelection(ChangeEventArgs e)
+    {
+        if (e.Value == null) return;
+        
+        var type = Enum.Parse<DataSourceEnum>(e.Value.ToString() ?? string.Empty);
+
+        _dataSource.Type = type;
+        
+        switch (type)
+        {
+            case DataSourceEnum.Excel:
+                
+                _dataSource.Config = new DataSourceExcelConfig
+                {
+                    FileName = "",
+                };
+                break;
+            case DataSourceEnum.Csv:
+                _dataSource.Config = new DataSourceCsvConfig
+                {
+                    FileName = "",
+                };
+                break;
+            case DataSourceEnum.Sqlite:
+                _dataSource.Config = new DataSourceSqliteConfig
+                {
+                    FileName = "",
+                };
+                break;
+        }
+        
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public IDataSourceConfig GetConfigurationFrom(DataSourceEnum type, string configuration)
+    {
+        switch (type)
+        {
+            case DataSourceEnum.Excel:
+                return JsonConvert.DeserializeObject<DataSourceExcelConfig>(configuration);
+            case DataSourceEnum.Csv:
+                return JsonConvert.DeserializeObject<DataSourceCsvConfig>(configuration);
+            case DataSourceEnum.Sqlite:
+                return JsonConvert.DeserializeObject<DataSourceSqliteConfig>(configuration);
+        }
+        return null;
+    }
+
+    private async void Update()
+    {
+        if (_dataSource == null) return;
+
+        if (_dataSource.Type == 0)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", "Datasource type is required");
+            return;
+        }
+        
+        var dataSource = DataSources.GetDataSourceById(_dataSource.DataSourceId);
+        
+        switch (_dataSource.Type)
+        {
+            case DataSourceEnum.Excel:
+            case DataSourceEnum.Csv:
+            case DataSourceEnum.Sqlite:
+                if (await _updateDatasource(dataSource, _dataSource.Type)) return;
+                break;
+            case DataSourceEnum.Postgresql:
+                break;
+            case DataSourceEnum.MySql:
+                break;
+            case DataSourceEnum.SqlServer:
+                break;
+            case DataSourceEnum.WebService:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+        
+        await _js.InvokeVoidAsync($"docomposer.util.alertSuccess", $"{dataSource.Name} datasource updated");
+    }
+
+    private async Task<bool> _updateDatasource(DataSource dataSource, DataSourceEnum type)
+    {
+        var fileName = "";
+        dataSource.Type = type;
+        switch (type)
+        {
+            case DataSourceEnum.Excel:
+                fileName = ((DataSourceExcelConfig)_dataSource.Config).FileName;
+                dataSource.Configuration = ((DataSourceExcelConfig)_dataSource.Config).Configuration();
+                break;
+            case DataSourceEnum.Csv:
+                fileName = ((DataSourceCsvConfig)_dataSource.Config).FileName;
+                dataSource.Configuration = ((DataSourceCsvConfig)_dataSource.Config).Configuration();
+                break;
+            case DataSourceEnum.Sqlite:
+                fileName = ((DataSourceSqliteConfig)_dataSource.Config).FileName;
+                dataSource.Configuration = ((DataSourceSqliteConfig)_dataSource.Config).Configuration();
+                break;
+            case DataSourceEnum.Postgresql:
+                break;
+            case DataSourceEnum.MySql:
+                break;
+            case DataSourceEnum.SqlServer:
+                break;
+            case DataSourceEnum.WebService:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(type), type, null);
+        }
+        
+        var filePath = FileHandler.CombinePaths(ThisApp.DocReuseDocumentsPath(), DirName.DataSources,
+            dataSource.ProjectId.ToString(), dataSource.Type.ToString(), fileName);
+
+        if (!FileHandler.ExistsFile(filePath) && _binaryFileContent == null)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", $"{type.ToString()} file required");
+            return true;
+        }
+        
+        if (_binaryFileContent != null)
+        {
+            var dataSourceWithFile = new DataSourceWithFile
+            {
+                DataSource = dataSource,
+                FileContent = _binaryFileContent
+            };
+            DataSources.UpdateDataSourceWithFile(dataSourceWithFile);    
+        }
+        else
+        {
+            DataSources.UpdateDataSourceById(dataSource);
+        }
+
+        return false;
+    }
+
+    private async Task HandleOnFileChange(IBrowserFile file)
+    {
+        using var ms = new MemoryStream();
+        //todo: configure maxAllowedSize in settings
+        try
+        {
+            var stream = file.OpenReadStream(maxAllowedSize: 20000000); // 20MB
+            await stream.CopyToAsync(ms);
+            _binaryFileContent = ms.ToArray();
+        }
+        catch (Exception ex)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", $"{ex.Message}");
+        }
+    }
+
+    private async void Cancel()
+    {
+        if (_dataSource is not {DataSourceId: > 0 }) return;
+        
+        var dataSource = DataSources.GetDataSourceById(_dataSource.DataSourceId);
+        _dataSource = new ItemDataSourceModel
+        {
+            DataSourceId = dataSource.Id,
+            Type = dataSource.Type,
+            Config = GetConfigurationFrom(dataSource.Type, dataSource.Configuration)
+        };
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+}

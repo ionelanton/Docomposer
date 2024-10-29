@@ -1,0 +1,31 @@
+@page
+@using Microsoft.AspNetCore.Html
+@model Docomposer.Pages.DataSources
+
+@{
+    ViewData["Title"] = "Data sources";
+}
+
+<div class="row">
+    <div class="col-md-auto">
+        <div id="tree-menu"></div>
+    </div>
+    <div class="col">
+        <div class="row">
+            <div id="datasource" class="container-fluid">
+                @(await Html.RenderComponentAsync<Docomposer.Blazor.Shared.DataSource.ContainerDataSource>(RenderMode.ServerPrerendered))
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            docomposer.configure(@(new HtmlString(JsConfig.AsJson(@Model))));
+            docomposer.api.setup();
+            docomposer.api.menu.dataSources("#tree-menu");
+            docomposer.api.datasource.init("#datasource");
+        });
+    </script>
+}

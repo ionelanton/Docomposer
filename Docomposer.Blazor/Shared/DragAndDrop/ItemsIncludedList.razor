@@ -1,0 +1,48 @@
+@using System.Reflection.Metadata
+@using Docomposer.Blazor.Data.DragAndDrop
+@using Microsoft.AspNetCore.Components.Rendering
+
+<div class="col">
+    <h5>@Description</h5>
+    <div class="" style="overflow-y: scroll; max-height: 20vh;">
+        <ul class="dropzone" style="padding-left: 0; min-height: 18vh;" 
+            ondragover="event.preventDefault();"
+            ondragstart="event.dataTransfer.setData('', event.target.id);"
+            @ondrop="HandleDrop">
+    
+            @foreach (var item in Items)
+            {
+                <ItemIncluded Item="item" OnDragItemStarted="@(() => HandleDragStarted(item))" OnDropOnItemIncluded="@(() => DropFinished(item))" OnDeleteItem="@(() => HandleDeleteItem(item))" />
+            }
+        </ul>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<ItemIncludedModel> Items { get; set; }
+    [Parameter] public EventCallback<DragEventArgs> OnDropFinished { get; set; }
+    [Parameter] public EventCallback<ItemIncludedModel> OnDragStarted { get; set; }
+    [Parameter] public EventCallback<ItemIncludedModel> OnDropOnItemIncludedFinished { get; set; }
+    [Parameter] public EventCallback<ItemIncludedModel> OnDeleteItem { get; set; }
+    public static string Description { get; set; }
+
+    private async Task HandleDrop(DragEventArgs e)
+    {
+        await OnDropFinished.InvokeAsync(e);
+    }
+
+    private async Task HandleDragStarted(ItemIncludedModel item)
+    {
+        await OnDragStarted.InvokeAsync(item);
+    }
+
+    private async Task DropFinished(ItemIncludedModel item)
+    {
+        await OnDropOnItemIncludedFinished.InvokeAsync(item);
+    }
+    
+    private async Task HandleDeleteItem(ItemIncludedModel item)
+    {
+        await OnDeleteItem.InvokeAsync(item);
+    }
+}

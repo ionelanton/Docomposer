@@ -1,0 +1,213 @@
+@using Docomposer.Core.Api
+@using Docomposer.Core.Domain
+@using System.Runtime.CompilerServices
+@using Docomposer.Data.Util
+@using System.Data
+@using Docomposer.Data.Databases.DataStore
+@using Docomposer.Data.Databases.DataStore.Tables
+@using LinqToDB.Linq
+@using Newtonsoft.Json
+@using NPOI.OpenXmlFormats.Dml
+@using Task = System.Threading.Tasks.Task
+@inject IJSRuntime _js;
+
+<div class="row">
+    <div class="col-8">
+        <div class="row form-group">
+            <div class="col-3">
+                Name
+            </div>
+            <div class="col-9">
+                <input class="form-control" type="text" @bind="QueryModel.Name">
+            </div>
+        </div>
+        <div class="row form-group">
+            <div class="col-3">
+                Description
+            </div>
+            <div class="col-9">
+                <input class="form-control" type="text" @bind="QueryModel.Description">
+            </div>
+        </div>
+        <div class="row form-group" style="margin-bottom: 0;">
+            <div class="col">
+                <textarea id="textarea-ace-editor-@QueryModel.Id" class="invisible" @bind="QueryModel.Statement" style="position: absolute; bottom: 0;" ></textarea>
+                <pre id="ace-editor-@QueryModel.Id" class="form-control" style="position: relative; width: 100%; height: 190px;"></pre>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col" style="width:0; overflow-x: auto; transform: rotate(180deg);">
+                <ItemDataTable Table="@QueryModel.DataTable"></ItemDataTable>
+            </div>
+        </div>
+    </div>
+    <div class="col-4">
+        <div>
+            <button @onclick="RunQuery" type="button" class="btn btn-primary">
+                <i class="fas fa-play"></i>
+            </button>
+            <button @onclick="Rollback" type="button" class="btn btn-warning">
+                <i class="fas fa-undo"></i>
+            </button>
+            <button @onclick="SaveQuery" type="button" class="btn btn-warning">
+                <i class="far fa-save"></i>
+            </button>
+            <button @onclick="DeleteQuery" type="button" class="btn btn-danger">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+        <hr/>
+        <form>
+            <ItemSqlParams QueryName="@QueryModel.Name" Parameters="@QueryModel.SqlParameters"></ItemSqlParams>
+        </form>
+    </div>
+</div>
+
+@code {
+
+    [Parameter] public DataQueryModel QueryModel { get; set; }
+    [Parameter] public EventCallback<DataQueryModel> OnUpdateQuery { get; set; }
+
+    private List<DataSource> _dataSources;
+
+    protected override void OnInitialized()
+    {
+        _dataSources = DataSources.GetDataSources();
+        
+        base.OnInitialized();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.ace.setValue", $"ace-editor-{QueryModel.Id}", $"{QueryModel.Statement}");
+        }
+        
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async Task RunQuery()
+    {
+        QueryModel.SyncParameters();
+        var sqlParam = Data.Utils.ParameterWithoutValue(QueryModel);
+        if (sqlParam != null)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", $"{sqlParam.Name} parameter has no value");
+            return;
+        }
+
+        try
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alert", "Loading data...");
+
+            var clonedQueryModel = QueryModel.Clone();
+
+            foreach (var p in clonedQueryModel.SqlParameters)
+            {
+                if (SqlUtils.HasSquareBracketsParamValue(p.Value)) continue;
+                
+                var queryName = p.Value.Split('.')[0].Replace("[", "").Replace("]", "");
+                var columnName = p.Value.Split('.')[1].Replace("[", "").Replace("]", "");
+
+                var query = DataQueries.GetDataQueryByDataSourceIdAndQueryName(clonedQueryModel.DataSourceId, queryName);
+                query.SyncParameters();
+
+                var dt = DataQueries.DataTableFromQueryDataSource(query);
+                var value = dt.Rows.OfType<DataRow>().Select(r => r[columnName].ToString()).First();
+                p.Value = value;
+            }
+            
+            clonedQueryModel.Parameters = JsonConvert.SerializeObject(clonedQueryModel.SqlParameters);
+          
+            QueryModel.DataTable = DataQueries.DataTableFromQueryDataSource(clonedQueryModel).AsEnumerable().Take(10).CopyToDataTable();
+        }
+        catch (TaskCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", ex.Message);
+            QueryModel.DataTable = new DataTable();
+        }
+    }
+
+    private async Task Rollback()
+    {
+        await using var db = new DocReuseDataConnection();
+        var dataQuery = db.DataQuery.FirstOrDefault(q => q.Id == QueryModel.Id);
+
+        if (dataQuery != null)
+        {
+            var storedQuery = new DataQueryModel
+            {
+                Id = dataQuery.Id,
+                Name = dataQuery.Name,
+                Description = dataQuery.Description,
+                Statement = dataQuery.Statement,
+                DataSourceId = dataQuery.DataSourceId,
+                Parameters = dataQuery.Parameters,
+                DataTable = new DataTable(),
+                SqlParameters = new List<SqlParam>(),
+                Active = "active"
+            };
+            storedQuery.SyncParameters();
+            QueryModel = storedQuery;
+            await _js.InvokeVoidAsync($"docomposer.util.ace.setValue", $"ace-editor-{QueryModel.Id}", $"{QueryModel.Statement}");
+        }
+    }
+
+    private async Task SaveQuery()
+    {
+        if (QueryModel.Name.Trim().Length == 0)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", "Query name is empty");
+        }
+        else
+        {
+            try
+            {
+                QueryModel.SyncParameters();
+
+                DataQueries.UpdateDataQuery(new DataQuery
+                {
+                    Id = QueryModel.Id,
+                    Name = QueryModel.Name,
+                    Description = QueryModel.Description,
+                    Statement = QueryModel.Statement,
+                    DataSourceId = QueryModel.DataSourceId,
+                    Parameters = QueryModel.Parameters
+                });
+
+                await OnUpdateQuery.InvokeAsync(QueryModel);
+                await _js.InvokeVoidAsync($"docomposer.util.alert", "Query updated");
+            }
+            catch (TaskCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                await _js.InvokeVoidAsync($"docomposer.util.alertError", ex.Message);
+            }
+        }
+    }
+
+    private async Task DeleteQuery()
+    {
+        //todo: confirmation: https://www.pragimtech.com/blog/blazor/delete-confirmation-dialog-in-blazor/
+        try
+        {
+            DataQueries.DeleteDataQueryById(QueryModel.Id);
+            await OnUpdateQuery.InvokeAsync(QueryModel);
+            await _js.InvokeVoidAsync($"docomposer.util.alert", "Query deleted");
+        }
+        catch (TaskCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", ex.Message);
+        }
+    }
+
+}

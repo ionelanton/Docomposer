@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <UseWindowsForms>true</UseWindowsForms>
+        <AssemblyName>Docomposer.Gui</AssemblyName>
+        <RootNamespace>Docomposer.Gui</RootNamespace>
+        <ApplicationIcon>docomposer.ico</ApplicationIcon>
+        <TargetFramework>net8.0-windows</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="CliWrap" Version="3.4.2" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
+      <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1150.38" />
+      <PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.0" />
+      <PackageReference Include="System.IO.Packaging" Version="8.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Docomposer.Data\Docomposer.Data.csproj" />
+      <ProjectReference Include="..\Docomposer\Docomposer.csproj" />
+    </ItemGroup>
+
+</Project>

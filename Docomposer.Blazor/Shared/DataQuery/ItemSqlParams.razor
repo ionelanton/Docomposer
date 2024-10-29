@@ -1,0 +1,21 @@
+@using System.Text.RegularExpressions
+@using Docomposer.Core.Api
+@using Docomposer.Core.Domain
+@using Docomposer.Data.Util
+@using NPOI.OpenXmlFormats.Dml
+
+
+@foreach (var param in Parameters)
+{
+    <div class="form-group">
+        <label for="@param.Name">@("[" + QueryName + "].[" + param.Name + "]")</label>
+        <input id="@param.Name" type="text" @bind="param.Value" class="form-control">
+    </div>
+}
+
+
+@code {
+
+    [Parameter] public List<SqlParam> Parameters { get; set; }
+    [Parameter] public string QueryName { get; set; }
+}

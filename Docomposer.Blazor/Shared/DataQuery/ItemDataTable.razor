@@ -1,0 +1,30 @@
+@using System.Data
+
+<table class="table table-bordered table-sm table-hover" style="transform: rotate(180deg);">
+    <thead class="thead-light">
+    <tr>
+        @foreach (DataColumn column in Table.Columns)
+        {
+            <th scope="col">@column.ColumnName,</th>
+        }
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (DataRow row in Table.Rows)
+    {
+        <tr>
+            @foreach (DataColumn column in Table.Columns)
+            {
+                <td>@row[column.ColumnName]</td>
+            }
+        </tr>
+    }
+    </tbody>
+</table>
+
+@code {
+
+    [Parameter]
+    public DataTable Table { get; set; }
+
+}

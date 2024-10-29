@@ -1,0 +1,45 @@
+@page
+@using Docomposer.Blazor.Data.DragAndDrop
+@using Docomposer.Blazor.Services
+@using Microsoft.AspNetCore.Html
+@model Docomposer.Pages.Compositions
+@inject BlazorDataTransferService DataTransferService
+
+
+@{
+    ViewData["Title"] = "Compositions";
+}
+
+<div class="row">
+    <div class="col-md-auto">
+        <div id="tree-menu"></div>
+    </div>
+    <div class="col" id="composition-container">
+        <div class="row" style="max-height: 25vh; margin-bottom: 3px;" id="grid">
+            @(await Html.RenderComponentAsync<Docomposer.Blazor.Shared.DragAndDrop.ItemsContainer>(RenderMode.ServerPrerendered, new { ItemTypeParam = ItemType.Compositions }))
+        </div>
+        <div class="row">
+            <div class="col">
+                <div id="preview" class="text-center" style="background-color: #eeeeee;">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            let preview = "#preview";
+            docomposer.configure(@(new HtmlString(JsConfig.AsJson(@Model))));
+            docomposer.api.setup();
+            docomposer.api.menu.compositions("#tree-menu");
+            docomposer.api.doc.init({ container: "#composition-container", preview: preview});
+
+            docomposer.util.setPdfContainerHeight(preview, 0.8);
+            $(window).resize(function() {
+                docomposer.util.setPdfContainerHeight(preview, 0.8);
+            });
+        });
+    </script>
+}

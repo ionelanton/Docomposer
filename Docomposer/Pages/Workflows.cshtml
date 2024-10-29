@@ -1,0 +1,29 @@
+@page
+@using Microsoft.AspNetCore.Html
+@model Docomposer.Pages.Workflows
+
+@{
+    ViewData["Title"] = "Workflows";
+}
+
+<div class="row">
+    <div class="col-md-auto">
+        <div id="tree-menu"></div>
+    </div>
+    <div class="col" id="workflow-container">
+        <div class="container-fluid">
+            @(await Html.RenderComponentAsync<Docomposer.Blazor.Shared.Workflow.ItemWorkflow>(RenderMode.ServerPrerendered))
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            docomposer.configure(@(new HtmlString(JsConfig.AsJson(@Model))));
+            docomposer.api.setup();
+            docomposer.api.menu.workflows("#tree-menu");
+            docomposer.api.workflow.init("#workflow-container");
+        });
+    </script>
+}

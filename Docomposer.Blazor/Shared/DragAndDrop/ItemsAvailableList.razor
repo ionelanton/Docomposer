@@ -1,0 +1,28 @@
+@using System.Reflection.Metadata
+@using Docomposer.Blazor.Data.DragAndDrop
+@using Microsoft.AspNetCore.Components.Rendering
+
+<div class="col">
+    <h5>@Description</h5>
+    <div style="overflow-y: scroll; max-height: 20vh;">
+        <ul style="padding-left: 0"
+            ondragstart="event.dataTransfer.setData('', event.target.id);">
+    
+            @foreach (var item in Items)
+            {
+                <ItemAvailable Item="item" OnDragStarted="() => DragStarted(item)" />
+            }
+        </ul>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<ItemAvailableModel> Items { get; set; }
+    [Parameter] public EventCallback<ItemAvailableModel> OnDragOfItemAvailableStarted { get; set; }
+    public static string Description { get; set; }
+
+    private async Task DragStarted(ItemAvailableModel item)
+    {
+        await OnDragOfItemAvailableStarted.InvokeAsync(item);
+    }
+}

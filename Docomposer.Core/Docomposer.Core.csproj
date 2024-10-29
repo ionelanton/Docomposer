@@ -1,0 +1,69 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0-windows</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Docomposer.Data\Docomposer.Data.csproj" />
+      <ProjectReference Include="..\Docomposer.Webdav\Docomposer.Webdav.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Clippit" Version="2.1.0" />
+      <PackageReference Include="CsvHelper" Version="30.0.1" />
+      <PackageReference Include="DocumentFormat.OpenXml" Version="3.0.2" />
+      <PackageReference Include="Flurl" Version="3.0.2" />
+      <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
+      <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.2" />
+      <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="6.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+      <PackageReference Include="NPOI" Version="2.6.2" />
+      <PackageReference Include="RunProcessAsTask" Version="1.2.4" />
+      <PackageReference Include="System.Text.Encoding.CodePages" Version="6.0.0" />
+      <PackageReference Include="UTF.Unknown" Version="2.5.1" />
+      <PackageReference Include="WebDav.Client" Version="2.7.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="Util\Webdav\Resources\Section 1.docx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Util\Webdav\Resources\Section 2.docx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Util\Webdav\Resources\Section 3.docx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Util\Resources\empty.docx">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="Util\Webdav\Resources\Document 1.docx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Util\Webdav\Resources\Document 2.docx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Util\Webdav\Resources\Document 3.docx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Util\Webdav\Resources\Section 4.docx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Util\Resources\pagebreak.docx">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="Util\Webdav\Resources\DataSources\excel.xlsx">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\Docomposer\appsettings.Development.json">
+        <Link>appsettings.Development.json</Link>
+      </Content>
+    </ItemGroup>
+
+</Project>

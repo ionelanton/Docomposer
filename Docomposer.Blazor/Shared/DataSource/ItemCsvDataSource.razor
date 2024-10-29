@@ -1,0 +1,77 @@
+@using Docomposer.Core.Domain.DataSourceConfig
+@using Docomposer.Data.Databases.DataStore.Tables
+@using RunProcessAsTask
+@using System.Diagnostics
+@using Docomposer.Utils
+<div>
+    <div class="row">
+        <div class="col-md-1">
+            <label class="form-label">CSV file:</label>
+        </div>
+        <div class="col-md-4 d-inline">
+            <div class="p-1">
+                <table>
+                    <tr>
+                        <td><a href="@Url" @onclick="OpenCsvDataSource"> @CsvConfig.FileName</a>&nbsp;</td>
+                        <td>
+                            <InputFile OnChange="@ChangeFile"></InputFile>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public int ProjectId { get; set; }
+
+    [Parameter]
+    public DataSourceCsvConfig CsvConfig { get; set; }
+
+    [Parameter]
+    public EventCallback<IBrowserFile> OnFileChange { get; set; }
+
+    private string Url
+    {
+        get
+        {
+            var path = ThisApp.FileHandler().CombinePaths(ThisApp.DocReuseDocumentsPath(), DirName.DataSources, ProjectId.ToString(), ((int)DataSourceEnum.Csv).ToString(), CsvConfig.FileName);
+
+            if (path.IsWebDavPath())
+            {
+                return "ms-excel:ofe|u|" + path;
+            }
+            return "javascript:";
+        }
+    }
+
+    private async Task ChangeFile(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            await OnFileChange.InvokeAsync(e.File);
+        }
+        catch (Exception ex)
+        {
+            Console.Out.WriteLine("ex = {0}", ex);
+        }
+    }
+
+    private void OpenCsvDataSource()
+    {
+        if (ThisApp.DocReuseDocumentsPath().IsWebDavPath()) return;
+
+        var procInfo = new ProcessStartInfo
+        {
+            FileName = ThisApp.MicrosoftOfficeExcel(),
+            Arguments =
+                $"/t \"{ThisApp.FileHandler().CombinePaths(ThisApp.DocReuseDocumentsPath(), DirName.DataSources, ProjectId.ToString(), ((int)DataSourceEnum.Csv).ToString(), CsvConfig.FileName)}\"",
+            RedirectStandardError = true,
+        };
+
+        ProcessEx.RunAsync(procInfo);
+    }
+}

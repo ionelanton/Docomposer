@@ -1,0 +1,151 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0-windows</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="CsvHelper" Version="30.0.1" />
+      <PackageReference Include="FluentMigrator" Version="3.2.9" />
+      <PackageReference Include="FluentMigrator.Abstractions" Version="3.2.9" />
+      <PackageReference Include="FluentMigrator.Runner" Version="3.2.9" />
+      <PackageReference Include="FluentMigrator.Runner.SqlServerCe" Version="3.2.9" />
+      <PackageReference Include="linq2db.SqlCe" Version="4.0.0" />
+      <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="6.0.0" />
+      <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="6.0.0" />
+      <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.2.7" />
+      <PackageReference Include="Microsoft.AspNetCore.Hosting.Abstractions" Version="2.2.0" />
+      <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.2" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.0" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.0" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="6.0.0" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="6.0.0">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools.DotNet" Version="2.0.3" />
+      <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="6.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+      <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="161.8910.0" />
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+      <PackageReference Include="NPOI" Version="2.6.2" />
+      <PackageReference Include="NUnit3TestAdapter" Version="4.0.0-beta.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\DataAnnotations.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>DataAnnotations.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\DataAnnotations.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\DataModel.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>DataModel.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\DataModel.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\EditableObject.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>EditableObject.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\EditableObject.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\Equatable.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>Equatable.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\Equatable.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\Humanizer.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>Humanizer.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\Humanizer.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\LinqToDB.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>LinqToDB.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\LinqToDB.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\LinqToDB.PostgreSQL.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>LinqToDB.PostgreSQL.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\LinqToDB.PostgreSQL.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\LinqToDB.PostgreSQL.Tools.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>LinqToDB.PostgreSQL.Tools.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\LinqToDB.PostgreSQL.Tools.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\LinqToDB.Tools.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>LinqToDB.Tools.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\LinqToDB.Tools.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\MultipleFiles.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>MultipleFiles.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\MultipleFiles.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\NotifyDataErrorInfo.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>NotifyDataErrorInfo.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\NotifyDataErrorInfo.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\NotifyPropertyChanged.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>NotifyPropertyChanged.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\NotifyPropertyChanged.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\ObsoleteAttributes.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>ObsoleteAttributes.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\ObsoleteAttributes.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\PluralizationService.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>PluralizationService.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\PluralizationService.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\T4Model.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>T4Model.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\T4Model.ttinclude</Link>
+      </None>
+      <None Update="C:\Users\johnny\.nuget\packages\linq2db.postgresql\3.1.6\contentFiles\any\any\LinqToDB.Templates\Validation.ttinclude">
+        <Generator>TextTemplatingFilePreprocessor</Generator>
+        <LastGenOutput>Validation.cs</LastGenOutput>
+        <Link>LinqToDB.Templates\Validation.ttinclude</Link>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Docomposer.Utils\Docomposer.Utils.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Update="Localization\Localization.en.resx">
+        <Generator>ResXFileCodeGenerator</Generator>
+        <LastGenOutput>Localization.en.Designer.cs</LastGenOutput>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
+      <EmbeddedResource Update="Localization\Localization.resx">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Localization\Localization.en.Designer.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>DocReuse.en.resx</DependentUpon>
+      </Compile>
+      <Compile Remove="Databases\DataStore\Tables\EncryptableTable.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\Docomposer\appsettings.Development.json">
+        <Link>appsettings.Development.json</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
+</Project>

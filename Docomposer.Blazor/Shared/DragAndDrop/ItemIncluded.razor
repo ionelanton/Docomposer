@@ -1,0 +1,28 @@
+@using Docomposer.Blazor.Data.DragAndDrop
+<li id="@Item.Id" class="list-group-item d-flex justify-content-between align-items-center draggable" 
+    draggable="true" title="@Item.Name" @ondragstart="@(() => HandleDragStarted(Item))" @ondrop="@(() => HandleDrop(Item))" style="cursor: grab;">
+    <span>@Item.Name</span>
+    <i class="fas fa-times" style="cursor: pointer;" @onclick="@(() => HandleDeleteItem(Item))"></i>
+</li>
+
+@code {
+    [Parameter] public ItemIncludedModel Item { get; set; }
+    [Parameter] public EventCallback<ItemIncludedModel> OnDropOnItemIncluded { get; set; }
+    [Parameter] public EventCallback<ItemIncludedModel> OnDragItemStarted { get; set; }
+    [Parameter] public EventCallback<ItemIncludedModel> OnDeleteItem { get; set; }
+
+    private async Task HandleDragStarted(ItemIncludedModel item)
+    {
+        await OnDragItemStarted.InvokeAsync(item);
+    }
+
+    private async Task HandleDrop(ItemIncludedModel item)
+    {
+        await OnDropOnItemIncluded.InvokeAsync(item);
+    }
+
+    private async Task HandleDeleteItem(ItemIncludedModel item)
+    {
+        await OnDeleteItem.InvokeAsync(item);
+    }
+}

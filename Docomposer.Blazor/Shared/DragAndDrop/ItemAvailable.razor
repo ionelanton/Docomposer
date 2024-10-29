@@ -1,0 +1,18 @@
+@using Microsoft.AspNetCore.Components.Web
+@using System.Globalization
+@using Docomposer.Blazor.Data.DragAndDrop
+
+<li id="@Item.Id" class="list-group-item d-flex justify-content-between align-items-center draggable" 
+    draggable="true" title="@Item.Name" @ondragstart="@(() => HandleDragStarted(Item))" style="cursor: grab;">
+    <span>@Item.Name</span>
+</li>
+
+@code {
+    [Parameter] public ItemAvailableModel Item { get; set; }
+    [Parameter] public EventCallback<ItemAvailableModel> OnDragStarted { get; set; }
+
+    private async Task HandleDragStarted(ItemAvailableModel selectedItemAvailable)
+    {
+        await OnDragStarted.InvokeAsync(selectedItemAvailable);
+    }
+}

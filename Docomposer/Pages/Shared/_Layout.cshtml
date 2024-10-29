@@ -1,0 +1,94 @@
+﻿@using Docomposer.Core.Util
+@using DocumentFormat.OpenXml.Spreadsheet
+@using Microsoft.AspNetCore.Http
+@using Utils = Docomposer.Utils
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Doc Reuse</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/fontawesome/css/all.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+    <link rel="stylesheet" href="~/lib/jstree/themes/default/style.min.css" />
+    @* <link rel="stylesheet" href="~/css/debug.css" media="all" type="text/css" /> *@
+    <base href="~/">
+</head>
+<body>
+<header>
+    <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <div class="container-fluid">
+            <a class="navbar-brand" asp-area="" asp-page="/Index">Docomposer</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                    aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="navbar-collapse collapse d-sm-inline-flex" id="navbarSupportedContent">
+                <ul class="navbar-nav flex-grow-1">
+                    <li class="nav-item @(WebAppUtils.AsActiveCssAttribute(@Model, "workflows"))">
+                        <a class="nav-link" asp-area="" asp-page="/Workflows">Workflows</a>
+                    </li>
+                    <li class="nav-item @(WebAppUtils.AsActiveCssAttribute(@Model, "compositions"))">
+                        <a class="nav-link" asp-area="" asp-page="/Compositions">Compositions</a>
+                    </li>
+                    <li class="nav-item @(WebAppUtils.AsActiveCssAttribute(@Model, "documents"))">
+                        <a class="nav-link" asp-area="" asp-page="/Documents">Documents</a>
+                    </li>
+                    <li class="nav-item @(WebAppUtils.AsActiveCssAttribute(@Model, "sections"))">
+                        <a class="nav-link" asp-area="" asp-page="/Sections">Sections</a>
+                    </li>
+                    <li class="nav-item @(WebAppUtils.AsActiveCssAttribute(@Model, "datasources"))">
+                        <a class="nav-link" asp-area="" asp-page="/DataSources">Data sources</a>
+                    </li>
+                    <li class="nav-item @(WebAppUtils.AsActiveCssAttribute(@Model, "settings"))">
+                        <a class="nav-link" asp-area="" asp-page="/Settings">Settings</a>
+                    </li>
+                    <li class="nav-item @(WebAppUtils.AsActiveCssAttribute(@Model, "privacy"))">
+                        <a class="nav-link" asp-area="" asp-page="/Help">Help</a>
+                    </li>
+                </ul>
+                <a href="#">
+                    <i class="far fa-bell"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
+</header>
+<div class="container-fluid">
+    <main role="main" class="pb-3">
+        @RenderBody()
+    </main>
+</div>
+
+@* <footer class="border-top footer text-muted"> *@
+@*     <div class="container-fluid"> *@
+@*         &copy; 2019 - DocReuse - <a asp-area="" asp-page="/Privacy">Privacy</a> *@
+@*     </div> *@
+@* </footer> *@
+<input type="hidden" id="DocomposerClientInstance" value="@Guid.NewGuid().ToString()"/>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/lib/bootboxjs/bootbox.min.js"></script>
+<script src="~/lib/jstree/jstree.min.js"></script>
+<script src="~/lib/pdfobject/pdfobject.min.js"></script>
+<script src="~/lib/json-js/cycle.js"></script>
+<script src="~/lib/json-js/json2.js"></script>
+<script src="~/lib/axios/axios.min.js"></script>
+<script src="~/lib/ace/src-min-noconflict/ace.js"></script>
+<script src="~/lib/ace/src-min-noconflict/mode-sql.js"></script>
+<script src="~/lib/ace/src-min-noconflict/mode-sqlserver.js"></script>
+<script src="~/js/docomposer.js" asp-append-version="true"></script>
+<script src="~/js/docomposer.util.js" asp-append-version="true"></script>
+<script src="~/js/docomposer.util.ace.js" asp-append-version="true"></script>
+<script src="~/js/docomposer.api.js" asp-append-version="true"></script>
+<script src="~/js/docomposer.api.doc.js" asp-append-version="true"></script>
+<script src="~/js/docomposer.api.menu.js" asp-append-version="true"></script>
+<script src="~/js/docomposer.api.datasource.js" asp-append-version="true"></script>
+<script src="~/js/docomposer.api.workflow.js" asp-append-version="true"></script>
+<script src="~/_framework/blazor.server.js"></script>
+
+@RenderSection("Scripts", required: false)
+</body>
+</html>

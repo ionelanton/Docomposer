@@ -1,0 +1,262 @@
+@using Docomposer.Blazor.Services
+@using Docomposer.Blazor.Data.DragAndDrop
+@using Docomposer.Core.Domain
+@using Docomposer.Core.Util
+@using Task = System.Threading.Tasks.Task
+@inject IJSRuntime _js;
+@inject BlazorDataTransferService BlazorDataTransferService;
+
+<ItemsIncludedList Items="ItemsIncluded" OnDragStarted="@HandleDragStarted" OnDropFinished="@HandleDropFinished" OnDropOnItemIncludedFinished="@HandleDropOnItemIncludedFinished" OnDeleteItem="@HandleDeleteItem"/>
+<ItemsAvailableList Items="ItemsAvailable" OnDragOfItemAvailableStarted="@HandleDragOfItemAvailableStarted" />
+
+@code {
+    [Parameter] public string ItemTypeParam { get; set; }
+    private int Id { get; set; }
+    private List<ItemIncludedModel> ItemsIncluded { get; set; }
+    private List<ItemAvailableModel> ItemsAvailable { get; set; }
+    private ItemAvailableModel _availableItemRaisingDrag;
+    private ItemIncludedModel _includedItemRaisingDrop;
+    private ItemIncludedModel _includedItemRaisingDrag;
+    private int _indexOfIncludedItemRaisingDrop;
+    private int _indexOfIncludedItemRaisingDrag;
+    private string _clientInstance;
+    private Document _document;
+    private Composition _composition;
+
+    protected override void OnInitialized()
+    {
+        ItemsIncluded ??= new List<ItemIncludedModel>();
+        ItemsAvailable ??= new List<ItemAvailableModel>();    
+        
+        base.OnInitialized();
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            BlazorDataTransferService.OnDataChanged += HandleDataChanged;    
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async void HandleDataChanged(object sender, BlazorTransferData e)
+    {
+        try
+        {
+            _clientInstance = await GetClientInstance();
+            var isOk = _clientInstance == e.ClientInstance && ItemTypeParam == e.Type; 
+        
+            if (isOk & Id != e.Id
+                || isOk & Id == e.Id && ItemsAvailable.Count == 0 && ItemsIncluded.Count == 0)
+            {
+                Id = e.Id;
+               
+                switch (e.Type)
+                {
+                    case ItemType.Document:
+                        ItemsAvailableList.Description = "Sections available";
+                        ItemsIncludedList.Description = "Sections included";
+                        _document = Docomposer.Core.Api.Documents.GetDocumentById(Id);
+
+                        if (_document != null)
+                        {
+                            ItemsAvailable = Docomposer.Core.Api.Sections.GetSectionsByProjectId(_document.ProjectId).Select( s => new ItemAvailableModel
+                            {
+                                Id = s.Id,
+                                Name = s.Name
+                            }).OrderBy(i => i.Name).ToList();
+
+                            ItemsIncluded = Docomposer.Core.Api.SectionsDocuments.GetSectionsDocumentsByDocumentId(_document.Id).Select(st => new ItemIncludedModel
+                            {
+                                Id = st.Id,
+                                Name = st.Name,
+                                PredecessorId = st.PredecessorId
+                            }).OrderBy(i => i.PredecessorId).ToList();
+                        }
+                    
+                        break;
+                    case ItemType.Compositions:
+                        ItemsAvailableList.Description = "Documents available";
+                        ItemsIncludedList.Description = "Documents included";
+                        _composition = Docomposer.Core.Api.Compositions.GetCompositionById(Id);
+
+                        if (_composition != null)
+                        {
+                            ItemsAvailable = Docomposer.Core.Api.Documents.GetDocumentsByProjectId(_composition.ProjectId).Select(t => new ItemAvailableModel
+                            {
+                                Id = t.Id,
+                                Name = t.Name
+                            }).OrderBy(i => i.Name).ToList();
+
+                            ItemsIncluded = Docomposer.Core.Api.DocumentsCompositions.GetDocumentsCompositionsByCompositionId(_composition.Id).Select(ct => new ItemIncludedModel
+                            {
+                                Id = ct.Id,
+                                Name = ct.Name,
+                                PredecessorId = ct.PredecessorId
+                            }).OrderBy(i => i.PredecessorId).ToList();
+                        }
+                        break;
+                }
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            //todo: to address exception?
+        }
+    }
+
+    
+    private ValueTask<string> GetClientInstance()
+    {
+        return _js.InvokeAsync<string>("docomposer.util.clientInstance");
+    }
+
+    private void HandleDragOfItemAvailableStarted(ItemAvailableModel item)
+    {
+        // 1
+        _availableItemRaisingDrag = item;
+    }
+    
+    private void HandleDragStarted(ItemIncludedModel item)
+    {
+        // 1
+        _includedItemRaisingDrag = item;
+        _indexOfIncludedItemRaisingDrag = GetIndex(item);
+    }
+    
+    private void HandleDropOnItemIncludedFinished(ItemIncludedModel item)
+    {
+        // 2
+        _includedItemRaisingDrop = item;
+        _indexOfIncludedItemRaisingDrop = GetIndex(item);
+    }
+
+    private void HandleDeleteItem(ItemIncludedModel item)
+    {
+        var itemsIncludedOriginal = ItemsIncluded.Clone();
+        
+        var index = GetIndex(item);
+
+        switch (ItemTypeParam)
+        {
+            case ItemType.Document:
+                Docomposer.Core.Api.SectionsDocuments.DeleteSectionDocument(ItemsIncluded[index].Id);        
+                break;
+            case ItemType.Compositions :
+                Docomposer.Core.Api.DocumentsCompositions.DeleteDocumentComposition(ItemsIncluded[index].Id);
+                break;
+        }
+
+        ItemsIncluded.RemoveAt(index);
+        ItemsIncluded.FixPredecessors();
+
+        var itemsIncludedToUpdate = itemsIncludedOriginal.GetItemsHavingPredecessorsChanged(ItemsIncluded);
+        
+        foreach (var itemToUpdate in itemsIncludedToUpdate)
+        {
+            switch (ItemTypeParam)
+            {
+                case ItemType.Document:
+                    Docomposer.Core.Api.SectionsDocuments.UpdateSectionDocumentPredecessor(itemToUpdate.Id, itemToUpdate.PredecessorId);
+                    break;
+                case ItemType.Compositions :
+                    Docomposer.Core.Api.DocumentsCompositions.UpdateDocumentCompositionPredecessor(itemToUpdate.Id, itemToUpdate.PredecessorId);
+                    break;
+            }
+        }
+        
+        CoreUtils.UpdateDocumentFileLastWriteTime(_document);
+        CoreUtils.UpdateCompositionFileLastWriteTime(_composition);
+        
+        StateHasChanged();
+        ReinitItemsRaisinDragAndDrop();
+    }
+
+    private void HandleDropFinished(DragEventArgs e)
+    {
+        // 3
+        var itemsIncludedOriginal = ItemsIncluded.Clone();
+        
+        // Include available item
+        if (_availableItemRaisingDrag != null)
+        {
+            var itemId = 0;
+            switch (ItemTypeParam)
+            {
+                case ItemType.Document:
+                    itemId = Docomposer.Core.Api.SectionsDocuments.CreateSectionDocument(_availableItemRaisingDrag.Id, Id);
+                    break;
+                case ItemType.Compositions :
+                    itemId = Docomposer.Core.Api.DocumentsCompositions.CreateDocumentComposition(_availableItemRaisingDrag.Id, Id);
+                    break;
+            }
+            
+            var itemToInclude = new ItemIncludedModel
+            {
+                Id = itemId,
+                Name = _availableItemRaisingDrag.Name
+            };
+
+            if (_includedItemRaisingDrag == null && _includedItemRaisingDrop == null)
+            {
+                ItemsIncluded.Add(itemToInclude);
+            }
+            else if (_includedItemRaisingDrag == null && _includedItemRaisingDrop != null)
+            {
+                ItemsIncluded.Insert(_indexOfIncludedItemRaisingDrop + 1, itemToInclude);
+            }
+        }
+        
+        // Reorder included items
+        if (_availableItemRaisingDrag == null && _includedItemRaisingDrag != null && _includedItemRaisingDrop != null)
+        {
+            var itemDragged = ItemsIncluded[_indexOfIncludedItemRaisingDrag];
+
+            ItemsIncluded.RemoveAt(_indexOfIncludedItemRaisingDrag);
+            ItemsIncluded.Insert(_indexOfIncludedItemRaisingDrop, itemDragged);
+        }
+
+        ItemsIncluded.FixPredecessors();
+
+        var itemsIncludedToUpdate = itemsIncludedOriginal.GetItemsHavingPredecessorsChanged(ItemsIncluded);
+        
+        foreach (var itemToUpdate in itemsIncludedToUpdate)
+        {
+            switch (ItemTypeParam)
+            {
+                case ItemType.Document:
+                    Docomposer.Core.Api.SectionsDocuments.UpdateSectionDocumentPredecessor(itemToUpdate.Id, itemToUpdate.PredecessorId);
+                    break;
+                case ItemType.Compositions :
+                    Docomposer.Core.Api.DocumentsCompositions.UpdateDocumentCompositionPredecessor(itemToUpdate.Id, itemToUpdate.PredecessorId);
+                    break;
+            }
+        }
+
+        if (itemsIncludedToUpdate.Count > 0)
+        {
+            var item = itemsIncludedToUpdate.First();
+        }
+        
+        CoreUtils.UpdateDocumentFileLastWriteTime(_document);
+        CoreUtils.UpdateCompositionFileLastWriteTime(_composition);
+        
+        StateHasChanged();
+        ReinitItemsRaisinDragAndDrop();
+    }
+
+    private int GetIndex(ItemAvailableModel item)
+    {
+        return ItemsIncluded.FindIndex(i => i.Id == item.Id);
+    }
+
+    private void ReinitItemsRaisinDragAndDrop()
+    {
+        _availableItemRaisingDrag = null;
+        _includedItemRaisingDrag = null;
+        _includedItemRaisingDrop = null;
+    }
+}   

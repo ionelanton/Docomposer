@@ -1,0 +1,137 @@
+@using Docomposer.Blazor.Services
+@using Docomposer.Core.Api
+@using Docomposer.Data.Util
+@using System.Data
+@using System.IO
+@using Docomposer.Core.Domain
+@using Docomposer.Core.LiquidXml
+@using Docomposer.Utils
+@using Docomposer.Utils.Converters
+@using DocumentFormat.OpenXml.Packaging
+@using Task = System.Threading.Tasks.Task
+@inject IJSRuntime _js;
+@inject BlazorDataTransferService BlazorDataTransferService;
+<div class="row p-2">
+    <div class="col-8">
+        <div class="card" style="resize: horizontal; overflow: auto; min-height: 10em; padding: 0.5em">
+            @((MarkupString)Content)
+        </div>
+    </div>
+    <div class="col-4">
+        <form>
+            <div>
+                <button @onclick="Run" type="button" class="btn btn-primary">
+                    <i class="fas fa-play"></i>
+                </button>
+            </div>
+            <hr/>
+            @foreach (var query in Queries)
+            {
+                @foreach (var p in query.SqlParameters)
+                {
+                    <div class="form-group">
+                        <label for="@(query.Name + "." + p.Name)">@("[" + query.Name + "].[" + p.Name + "]")</label>
+                        <input type="text" @bind="@p.Value" class="form-control  form-control-sm" id="@(query.Name + "." + p.Name)">
+                    </div>
+                }
+            }
+        </form>
+    </div>
+</div>
+
+@code {
+
+    private string Content { get; set; } = "";
+    private List<DataQueryModel> Queries { get; set; } = new();
+    private string _clientInstance;
+    private int SectionId { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            BlazorDataTransferService.OnDataChanged += HandleDataChanged;
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async void HandleDataChanged(object sender, BlazorTransferData e)
+    {
+        try
+        {
+            _clientInstance = await GetClientInstance();
+            var isOk = _clientInstance == e.ClientInstance;
+
+            if ((isOk & SectionId != e.Id
+                 || isOk & SectionId == e.Id) && e.Type == "Sections")
+            {
+                SectionId = e.Id;
+
+                Queries = DataQueries.GetDataQueriesBySectionId(SectionId).Select(q => new DataQueryModel
+                {
+                    Id = q.Id,
+                    Name = q.Name,
+                    Statement = q.Statement,
+                    DataSourceId = q.DataSourceId,
+                    DataTable = new DataTable(),
+                    Parameters = q.Parameters,
+                    SqlParameters = new List<SqlParam>()
+                }).ToList();
+                Content = "";
+
+                Queries.ForEach(q => q.SyncParameters());
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            //todo: to address exception?
+        }
+    }
+
+    private ValueTask<string> GetClientInstance()
+    {
+        return _js.InvokeAsync<string>("docomposer.util.clientInstance");
+    }
+
+    private async Task Run()
+    {
+        var sqlParam = Docomposer.Blazor.Data.Utils.ParameterWithoutValue(Queries);
+        if (sqlParam != null)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", $"{sqlParam.Name} parameter has no value");
+            return;
+        }
+
+        try
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alert", "Loading data...");
+            var section = Sections.GetSectionById(SectionId);
+            var file = ThisApp.FileHandler().CombinePaths(ThisApp.DocReuseDocumentsPath(), section.ProjectId.ToString(), DirName.Sections, section.Name + ".docx");
+
+            //todo: to parameter in settings
+            var copiedDataModelQueries = Queries.UpdateDataTablesFromQueries(5);
+            
+            // Fix "Memory stream is not expandable" using an expandable stream
+            var allBytes =  File.ReadAllBytesAsync(file);
+            var stream = new MemoryStream(0);
+            await stream.WriteAsync(allBytes.Result, 0, allBytes.Result.Length);
+            
+            using var wd = WordprocessingDocument.Open(stream, true);
+            var tables = copiedDataModelQueries.Select(q => q.DataTable).ToList();
+            wd.ProcessDocumentWithDataFrom(tables);
+            wd.Save();
+
+            Content = DocxConverter.ConvertToHtml(wd);
+        }
+        catch (TaskCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await _js.InvokeVoidAsync($"docomposer.util.alertError", ex.Message);
+        }
+    }
+}
