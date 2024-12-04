@@ -375,7 +375,7 @@ docomposer.api.menu = docomposer.api.menu || {};
                             label: "Edit " + name,
                             icon: "far fa-file-word",
                             action: function () {
-                                docomposer.api.doc.open($node.parent.substring(2),"Documents", $node.text);
+                                docomposer.api.doc.open($node.parent.substring(2),"Templates", $node.text);
                             }
                         },
                         Refresh: {
